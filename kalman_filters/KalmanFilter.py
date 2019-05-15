@@ -41,7 +41,10 @@ class KalmanFilter:
 
         """
         N, M_min_one, D  = A.shape
+        M = M_min_one + 1
 
+
+        #F
         inter_1 = (np.einsum('nki,nkj -> ij',
                              A,
                              A)
@@ -53,12 +56,20 @@ class KalmanFilter:
                              B)
 
         self.F = np.linalg.inv(inter_1)@inter_2
+
+        #Q
+        inter_1 = (np.einsum('nik, kj -> nij', A, self.F)
+                   -
+                   B).reshape(N*(M-1), D)
+        self.Q = np.cov(inter_1, rowvar=False)
+
+
         
         if self.verbose:
             print('F :', self.F)
             print('F.shape :', self.F.shape)
-            print('inter_1 :', inter_1)
-            print('inter_2 :', inter_2)
+            print('Q :', inter_1)
+            print('Q.shape :', self.Q.shape)
 
 
 
