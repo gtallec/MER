@@ -39,7 +39,7 @@ class KalmanFilter:
         y : observation time serie.
 
         """
-        N, M - 1, D  = A.shape
+        N, M_min_one, D  = A.shape
 
         inter_1 = (np.einsum('nik,nkj->ij',
                              A,
