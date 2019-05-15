@@ -28,5 +28,5 @@ class KalmanFilter:
 
 if __name__ == '__main__':
 
-    kalman_filter = KalmanFilter()
+    kalman_filter = KalmanFilter('Coucou')
 
