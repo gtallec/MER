@@ -66,8 +66,8 @@ if __name__ == '__main__':
     kalman_filter = KalmanFilter(params_path = 'coucou',
                                  verbose = True)
 
-    kalman_filter.fit(A = np.identity(2).reshape((1,2,2)),
-                      B = np.identity(2).reshape((1,2,2)),
+    kalman_filter.fit(A = 5*np.identity(2).reshape((1,2,2)),
+                      B = 2*np.identity(2).reshape((1,2,2)),
                       y = None,
-                      lmbda = 0)
+                      lmbda = 3)
 
