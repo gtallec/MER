@@ -32,7 +32,8 @@ class KalmanFilter:
         """ Compute the parameters ruling the HMM transitions.
 
         Parameters :
-        A,B : hidden states time serie.
+        A,B : hidden states time serie 
+        N : song/ M : time_stamp/ D : feature dimension
         For n an integer :
         A[n] = [a1.T, ..., a(M-1).T] has size (M-1)xD.
         B[n] = [a2.T, ..., aM.T] has size (M-1)xD.
@@ -41,15 +42,15 @@ class KalmanFilter:
         """
         N, M_min_one, D  = A.shape
 
-        inter_1 = (np.einsum('nik,nkj->ij',
+        inter_1 = (np.einsum('nki,nkj -> ij',
                              A,
-                             np.transpose(A, axes=(0,2,1)))
+                             A)
                    +
                    N*lmbda*np.identity(D))
 
-        inter_2 = np.einsum('nik, nkj->ij',
+        inter_2 = np.einsum('nki, nkj -> ij',
                              A,
-                             np.transpose(B, axes=(0,2,1)))
+                             B)
 
         self.F = np.linalg.inv(inter_1)@inter_2
         
