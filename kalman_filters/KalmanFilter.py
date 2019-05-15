@@ -55,7 +55,7 @@ class KalmanFilter:
         
         if self.verbose:
             print('F :', self.F)
-            print('F.shape :' F.shape)
+            print('F.shape :', self.F.shape)
 
 
 if __name__ == '__main__':
