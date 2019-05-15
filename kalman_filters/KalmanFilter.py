@@ -56,6 +56,9 @@ class KalmanFilter:
         if self.verbose:
             print('F :', self.F)
             print('F.shape :', self.F.shape)
+            print('inter_1 :', inter_1)
+            print('inter_2 :', inter_2)
+
 
 
 if __name__ == '__main__':
