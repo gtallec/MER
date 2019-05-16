@@ -54,10 +54,12 @@ class KalmanFilter:
                    lmbda*np.identity(D))
 
         inter_2 = np.einsum('nki, nkj -> ij',
-                             a,
-                             b)
+                             b,
+                             a)
 
-        self.F = np.linalg.inv(inter_1)@inter_2
+        self.F = (inter_2
+                  @
+                  np.linalg.inv(inter_1))
 
         #Q
         inter_1 = ((b
@@ -73,7 +75,9 @@ class KalmanFilter:
         #G
         inter_1 = (Y.T@Y + lmbda*np.identity(H))
         inter_2 = Y.T@A
-        self.G = np.linalg.inv(inter_1)@inter_2
+        self.G = (inter_2
+                  @
+                  np.linalg.inv(inter_1))
 
         #R
         self.R = np.cov(Y-A@(self.G.T), rowvar=False)
