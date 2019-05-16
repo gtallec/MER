@@ -51,7 +51,7 @@ class KalmanFilter:
                              a,
                              a)
                    +
-                   N*lmbda*np.identity(D))
+                   lmbda*np.identity(D))
 
         inter_2 = np.einsum('nki, nkj -> ij',
                              a,
@@ -60,9 +60,10 @@ class KalmanFilter:
         self.F = np.linalg.inv(inter_1)@inter_2
 
         #Q
-        inter_1 = (np.einsum('nik, kj -> nij', a, self.F)
+        inter_1 = ((b
                    -
-                   b).reshape(N*(M-1), D)
+                   np.einsum('nik, jk -> nij', a, self.F))
+                   .reshape(N*(M-1), D)
         self.Q = np.cov(inter_1, rowvar=False)
 
         N, M, H = Y.shape
@@ -120,7 +121,9 @@ class KalmanFilter:
                                 np.linalg.inv(inter_1))
 
             K = np.einsum('nik, nkj -> nij', P_tr_k, inter_2)
-            a_k = a_tr_k + np.einsum(' , -> ',K)
+            a_k = a_tr_k + np.einsum(' , -> ',
+                                     K,
+                                     Y[:,k,:] - a_tr_k@(self.G.T)
 
 
 
