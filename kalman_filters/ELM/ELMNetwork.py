@@ -1,4 +1,4 @@
-from feature_samplings import normal_features
+from .feature_samplings import normal_features
 import numpy as np
 
 class ELMNetwork:
@@ -78,10 +78,6 @@ if __name__ == '__main__':
     X_test, Y_test = X[N_train:], Y[N_train:]
     C = 1000
     elm_network.train(X_train, Y_train, C)
-    se = np.linalg.norm(elm_network.predict(X_test) - Y_test)**2
-    mse = se/Y_test.shape[0]
-    print(mse)
-    print(elm_network.d_res(X).shape)
 
 
 
