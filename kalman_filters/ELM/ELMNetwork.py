@@ -45,6 +45,7 @@ class ELMNetwork:
         #phi'(A_f*a_{k-1} + b_f)
         d_activation_X = self.d_activation(X@(self.W_h).T + self.b_h)
         N, L = d_activation_X.shape
+
         #diag(phi'(A_f*a_{k-1} + b_f))
         diag_d_activation_X = (
             np.einsum('inj, ij -> nij', np.tile(A = d_activation_X[np.newaxis, :, :], reps = (L,1,1)), np.identity(L)))

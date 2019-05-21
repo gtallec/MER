@@ -146,7 +146,7 @@ class KalmanFilter:
                                     K,
                                     self.G,
                                     P_k_km1))
-        return A,P
+        return A, P
 
 
 if __name__ == '__main__':

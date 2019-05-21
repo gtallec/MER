@@ -91,7 +91,77 @@ class DeepKalmanFilter:
             print('self.Q.shape : ', self.Q.shape)
             print('self.G_net.beta.shape : ', self.G_net.beta.shape)
             print('self.R.shape : ', self.R.shape, '\n')
+
+    def predict(self, Y, a_0, P_0):
+        """Output the Kalman-predicted distribution trajectory
+
+        shape(Y): N, K, H
+        shape(a_0) : N, D
+        shape(p_0) : N, D, D
+        """
+        N, K, H = Y.shape
+        N, D = a_0.shape
+
+        A = np.zeros((N,K,D))
+        P = np.zeros((N,K,D,D))
+
+        A[:, 0, :] = a_0
+        P[:, 0, :] = P_0
+
+        for k in range(1,K):
+
+            #a_{k|k-1} = f_{NN}(a_{k-1})
+            a_k_km1 = self.F_net.predict(A[:, k-1, :])
+
+            #F = d_{a}f_{NN}|a = a_{k-1}
+            F = self.F_net.d_res(A[:, k-1, :])
+
+            #P_{k|k-1} = FP_{k-1}F.T + Q
+            P_k_km1 = (np.einsum('nik, nkl, njl -> nij',
+                                 F,
+                                 P[:, k-1, :],
+                                 F)
+                       + np.tile(self.Q[np.newaxis, :, :],
+                                 reps=(N,1,1)))
             
+            #G = d_{a}g_{NN}|a = a_{k|k-1}
+            G = self.G_net.d_res(a_k_km1)
+            
+            #GP_{k|k-1}G.T + R
+            inter_1 = (np.einsum('nik, nkl, njl -> nij',
+                                 G,
+                                 P_k_km1,
+                                 G)
+                       + np.tile(self.R[np.newaxis, :, :],
+                                 reps=(N,1,1)))
+            
+            #G.T((GP_{k|k-1}G.T + R)^{-1})
+            inter_2 = np.einsum('nki, nkj -> nij',
+                                G,
+                                np.linalg.inv(inter_1))
+
+            #K = P_{k|k-1}G.T((GP_{k|k-1}G.T + R)^{-1})
+            K = np.einsum('nik, nkj -> nij', P_k_km1, inter_2)
+
+            #a_{k} = a_{k|k-1} + K[y_{k} - g_{NN}(a_{k|k-1})]
+            A[:, k, :] = a_k_km1 + np.einsum('nh, ndh -> nd',
+                                             (Y[:, k, :]
+                                              -
+                                              self.G_net.predict(a_k_km1)),
+                                             K)
+            #P_{k} = P_{k|k-1} - KGP_{k|k-1}
+            P[:, k, :] = (P_k_km1
+                          -
+                          np.einsum('nik, nkl, nlj -> nij',
+                                    K,
+                                    G,
+                                    P_k_km1))
+            return A, P
+
+
+
+
+
 
 if __name__ == '__main__':
     #Simulation parameters
@@ -104,6 +174,7 @@ if __name__ == '__main__':
     #Simulated Data
     A = np.random.normal(loc = 0, scale = 1, size = (N, M, D))
     Y = np.random.normal(loc = 0, scale = 1, size = (N, M, H))
+
     #STS parameters
     STS_feature_sampling = ELM.normal_features
     STS_sampling_dim = (D, L)
@@ -115,6 +186,7 @@ if __name__ == '__main__':
                           STS_sampling_params,
                           STS_activation,
                           STS_d_activation)
+
     #STO parameters
     STO_feature_sampling = ELM.normal_features
     STO_sampling_dim = (D, L)
