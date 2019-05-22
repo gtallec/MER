@@ -1,6 +1,5 @@
-import .ELM
 import numpy as np
-
+from .ELM.ELMNetwork import ELMNetwork as ELMNet
 from tqdm import tqdm
 
 class DeepKalmanFilter:
@@ -29,7 +28,7 @@ class DeepKalmanFilter:
             print('STS_d_activation : ', STS_d_activation)
             print('STS_verbose : ', STS_verbose, '\n')
 
-        self.F_net = ELM.ELMNet(feature_sampling = STS_feature_sampling,
+        self.F_net = ELMNet(feature_sampling = STS_feature_sampling,
                                 sampling_dim = STS_sampling_dim,
                                 sampling_params = STS_sampling_params,
                                 activation = STS_activation,
@@ -43,7 +42,7 @@ class DeepKalmanFilter:
         STO_d_activation = STO_transition_net[4]
         STO_verbose = STO_transition_net[5]
 
-        self.G_net = ELM.ELMNet(feature_sampling = STO_feature_sampling,
+        self.G_net = ELMNet(feature_sampling = STO_feature_sampling,
                                 sampling_dim = STO_sampling_dim,
                                 sampling_params = STO_sampling_params,
                                 activation = STO_activation,
