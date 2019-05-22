@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 
 
 class KalmanFilter:
@@ -105,7 +106,7 @@ class KalmanFilter:
         A[:, 0, :] = a_0
         P[:, 0, :, :] = P_0
 
-        for k in range(1,K):
+        for k in tqdm(range(1,K)):
 
             #a_(k|k-1) = Fa_(k-1) 
             a_k_km1 = A[:, k-1, :]@((self.F).T)
