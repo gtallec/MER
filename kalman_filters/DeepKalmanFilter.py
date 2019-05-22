@@ -1,6 +1,8 @@
 import ELM
 import numpy as np
 
+from tqdm import tqdm
+
 class DeepKalmanFilter:
 
     def __init__(self, params_path, STS_transition_net, STO_transition_net, verbose):
@@ -16,6 +18,7 @@ class DeepKalmanFilter:
         STS_sampling_params = STS_transition_net[2]
         STS_activation = STS_transition_net[3]
         STS_d_activation = STS_transition_net[4]
+        STS_verbose = STS_transition_net[5]
 
         if verbose:
             print('--INITIAL STS PARAMETERS--')
@@ -23,34 +26,37 @@ class DeepKalmanFilter:
             print('STS_sampling_dim : ', STS_sampling_dim)
             print('STS_sampling_params : ', STS_sampling_params)
             print('STS_activation : ', STS_activation)
-            print('STS_d_activation : ', STS_d_activation, '\n')
+            print('STS_d_activation : ', STS_d_activation)
+            print('STS_verbose : ', STS_verbose, '\n')
 
         self.F_net = ELM.ELMNet(feature_sampling = STS_feature_sampling,
                                 sampling_dim = STS_sampling_dim,
                                 sampling_params = STS_sampling_params,
                                 activation = STS_activation,
                                 d_activation = STS_d_activation,
-                                verbose = False)
+                                verbose = STS_verbose)
 
         STO_feature_sampling = STO_transition_net[0]
         STO_sampling_dim = STO_transition_net[1]
         STO_sampling_params = STO_transition_net[2]
         STO_activation = STO_transition_net[3]
         STO_d_activation = STO_transition_net[4]
+        STO_verbose = STO_transition_net[5]
 
         self.G_net = ELM.ELMNet(feature_sampling = STO_feature_sampling,
                                 sampling_dim = STO_sampling_dim,
                                 sampling_params = STO_sampling_params,
                                 activation = STO_activation,
                                 d_activation = STO_d_activation,
-                                verbose = False)
+                                verbose = STO_verbose)
         if verbose:
             print('--INITIAL STO PARAMETERS--')
             print('STO_feature_sampling : ', STO_feature_sampling)
             print('STO_sampling_dim : ', STO_sampling_dim)
             print('STO_sampling_params : ', STO_sampling_params)
             print('STO_activation : ', STO_activation)
-            print('STO_d_activation : ', STO_d_activation , '\n')
+            print('STO_d_activation : ', STO_d_activation)
+            print('STO_verbose : ', STO_verbose, '\n')
 
     def fit(self, A, Y, lmbda):
         """ Compute the parameters ruling the HMM transitions.
@@ -85,7 +91,7 @@ class DeepKalmanFilter:
         if self.R.shape == ():
             self.R = self.R.reshape((1,1))
 
-        if verbose:
+        if self.verbose:
             print('--TRAINED PARAMETERS--')
             print('self.F_net.beta.shape : ', self.F_net.beta.shape)
             print('self.Q.shape : ', self.Q.shape)
@@ -108,7 +114,7 @@ class DeepKalmanFilter:
         A[:, 0, :] = a_0
         P[:, 0, :] = P_0
 
-        for k in range(1,K):
+        for k in tqdm(range(1,K)):
 
             #a_{k|k-1} = f_{NN}(a_{k-1})
             a_k_km1 = self.F_net.predict(A[:, k-1, :])
@@ -119,7 +125,7 @@ class DeepKalmanFilter:
             #P_{k|k-1} = FP_{k-1}F.T + Q
             P_k_km1 = (np.einsum('nik, nkl, njl -> nij',
                                  F,
-                                 P[:, k-1, :],
+                                 P[:, k-1, :, :],
                                  F)
                        + np.tile(self.Q[np.newaxis, :, :],
                                  reps=(N,1,1)))
@@ -150,13 +156,13 @@ class DeepKalmanFilter:
                                               self.G_net.predict(a_k_km1)),
                                              K)
             #P_{k} = P_{k|k-1} - KGP_{k|k-1}
-            P[:, k, :] = (P_k_km1
-                          -
-                          np.einsum('nik, nkl, nlj -> nij',
-                                    K,
-                                    G,
-                                    P_k_km1))
-            return A, P
+            P[:, k, :, :] = (P_k_km1
+                            -
+                            np.einsum('nik, nkl, nlj -> nij',
+                                      K,
+                                      G,
+                                      P_k_km1))
+        return A, P
 
 
 

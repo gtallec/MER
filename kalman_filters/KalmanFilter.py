@@ -113,7 +113,7 @@ class KalmanFilter:
             #P_(k|k-1) = FP_(k-1)F.T + Q
             P_k_km1 = (np.einsum('ik, nkl, jl -> nij',
                                 self.F,
-                                P[:, k-1, :],
+                                 P[:, k-1, :, :],
                                 self.F)
                       + np.tile(self.Q[np.newaxis, :, :],
                                 reps=(N,1,1)))
@@ -140,7 +140,7 @@ class KalmanFilter:
                                               - 
                                               a_k_km1@(self.G.T)),
                                              K)
-            P[:, k, :] = (P_k_km1 
+            P[:, k, :, :] = (P_k_km1 
                           - 
                           np.einsum('nik, kl, nlj -> nij',
                                     K,

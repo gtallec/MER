@@ -18,6 +18,15 @@ class ELMNetwork:
         self.beta = None
         self.verbose = verbose
 
+        if self.verbose:
+            print('--INIT NETWORK PARAMETERS--')
+            print('-WEIGHTS-')
+            print('W_h.shape : ', self.W_h.shape)
+            print('W_h', self.W_h, '\n')
+            print('-BIAS-')
+            print('b_h.shape', self.b_h.shape)
+            print('b_h', self.b_h, '\n')
+
     def train(self, X, T, C):
         """Computes the optimal output weight parameter beta, for the neural network with hidden layer generated from feature_mapping :
         X : the input matrix of size (N, D)
@@ -27,7 +36,7 @@ class ELMNetwork:
         """
 
         #Compute the hidden layer output of size (N,L)
-        H = self.activation(X@(self.W_h).T + self.b_h)
+        H = self.activation(X@(self.W_h).T + self.b_h.T)
         N, L = H.shape
 
         self.beta = (np.linalg.inv(np.identity(L)/C + (H.T)@H)
@@ -35,27 +44,43 @@ class ELMNetwork:
                      (H.T)@T).T
 
         if self.verbose:
-            print('H.shape', H.shape)
+            print('--TRAINED PARAMETERS--')
+            print('H.shape', H.shape, '\n')
             print('beta.shape', self.beta.shape)
+            print('beta', self.beta, '\n')
 
     def d_res(self, X):
         """
         Given a simulation of N trajectories, input X is a batch of N actions a_{k-1} and is therefore of size (N,D) where D is the dimension of the action space.
         """
         #phi'(A_f*a_{k-1} + b_f)
-        d_activation_X = self.d_activation(X@(self.W_h).T + self.b_h)
+        d_activation_X = self.d_activation(X@(self.W_h).T + self.b_h.T)
+        if self.verbose:
+            print('d_activation_X.shape : ', d_activation_X.shape)
+            print('d_activation_X : ', d_activation_X)
+
         N, L = d_activation_X.shape
 
         #diag(phi'(A_f*a_{k-1} + b_f))
         diag_d_activation_X = (
             np.einsum('inj, ij -> nij', np.tile(A = d_activation_X[np.newaxis, :, :], reps = (L,1,1)), np.identity(L)))
 
+        if self.verbose:
+            print('diag_d_activation_X.shape : ', diag_d_activation_X.shape)
+            print('diag_d_activation_X : ', diag_d_activation_X) 
+
         #W_fdiag(phi'(A_f*a_{k-1} + b_f))A_f
-        return np.einsum('ik,nkl,lj -> nij', self.beta, diag_d_activation_X, self.W_h) 
+        res = np.einsum('ik,nkl,lj -> nij', self.beta, diag_d_activation_X, self.W_h)
+
+        if self.verbose:
+            print('d_res.shape : ', res.shape)
+            print('d_res : ', res)
+
+        return res
 
 
     def predict(self, X):
-        return (X@(self.W_h.T) + self.b_h)@self.beta.T
+        return (X@(self.W_h.T) + self.b_h.T)@self.beta.T
 
 if __name__ == '__main__':
     N = 20
