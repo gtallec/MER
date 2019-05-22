@@ -1,4 +1,4 @@
-import ELM
+import .ELM
 import numpy as np
 
 from tqdm import tqdm
