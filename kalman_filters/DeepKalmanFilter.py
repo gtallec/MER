@@ -1,5 +1,5 @@
 import numpy as np
-from .ELM.ELMNetwork import ELMNetwork as ELMNet
+from ELM.ELMNetwork import ELMNetwork as ELMNet
 from tqdm import tqdm
 
 class DeepKalmanFilter:

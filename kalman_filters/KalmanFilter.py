@@ -1,6 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-
+import time
 
 class KalmanFilter:
 
@@ -16,20 +16,21 @@ class KalmanFilter:
 
 
     def save_params(self):
-        np.savez(params_path,
+        np.savez(self.params_path + 'params.npz',
                  F=self.F,
                  Q=self.Q,
                  G=self.G,
                  R=self.R)
 
     def load_params(self):
-        params = np.load(params_path)
+        params = np.load(self.params_path + 'params.npz')
         self.F = params['F']
         self.Q = params['Q']
         self.G = params['G']
         self.R = params['R']
 
-    def fit(self, A, Y, lmbda):
+    def fit(self, A, a, b, Y, lmbda):
+        #TODO:Rewrite description with good shapes and all
         """ Compute the parameters ruling the HMM transitions.
 
         Parameters :
@@ -43,10 +44,8 @@ class KalmanFilter:
 
         """
 
-        N, M, D  = A.shape
-
-        a = A[:, :M-1, :].reshape((N*(M-1), D))
-        b = A[:, 1:, :].reshape((N*(M-1), D))
+        D = A.shape[1]
+        H = Y.shape[1]
         #F
         inter_1 = ((a.T)@a
                    +
@@ -59,15 +58,10 @@ class KalmanFilter:
                   np.linalg.inv(inter_1))
 
         #Q
-        self.Q = np.cov(b - a@(self.F.T), rowvar=False)
+        self.Q = np.atleast_2d(np.cov(b - a@(self.F.T),
+                                      rowvar=False,
+                                      ddof=0))
         
-        if self.Q.shape == ():
-            self.Q = self.Q.reshape((1,1))
-
-        N, M, H = Y.shape
-        Y = Y.reshape(N*M, H)
-        A = A.reshape(N*M, D)
-
         #G
         inter_1 = (A.T@A + lmbda*np.identity(D))
         inter_2 = Y.T@A
@@ -76,9 +70,9 @@ class KalmanFilter:
                   np.linalg.inv(inter_1))
 
         #R
-        self.R = np.cov(Y-A@(self.G.T), rowvar=False)
-        if self.R.shape == ():
-            self.R = self.R.reshape((1,1))
+        self.R = np.atleast_2d(np.cov(Y-A@(self.G.T),
+                                      rowvar=False,
+                                      ddof=0))
 
         if self.verbose:
             print('F :', self.F)
@@ -108,45 +102,61 @@ class KalmanFilter:
 
         for k in tqdm(range(1,K)):
 
+            t1 = time.time()
             #a_(k|k-1) = Fa_(k-1) 
             a_k_km1 = A[:, k-1, :]@((self.F).T)
-
+            t2 = time.time()
+            
             #P_(k|k-1) = FP_(k-1)F.T + Q
-            P_k_km1 = (np.einsum('ik, nkl, jl -> nij',
-                                self.F,
-                                 P[:, k-1, :, :],
-                                self.F)
-                      + np.tile(self.Q[np.newaxis, :, :],
-                                reps=(N,1,1)))
+            P_k_km1 = ((self.F
+                        @
+                        P[:, k-1, :, :]
+                        @
+                        self.F.T)
+                       + 
+                       np.tile(self.Q[np.newaxis, :, :],
+                               reps=(N,1,1)))
+            t3 = time.time()
 
             #GP_(k|k-1)G.T + R
-            inter_1 = (np.einsum('ik, nkl, jl -> nij',
-                                 self.G,
-                                 P_k_km1,
-                                 self.G)
-                       + np.tile(self.R[np.newaxis, :, :],
+            inter_1 = ((self.G
+                          @
+                          P_k_km1
+                          @
+                          self.G.T)
+                         +
+                         np.tile(self.R[np.newaxis, :, :],
                                  reps=(N,1,1)))
+            t4 = time.time()
+
 
             #G.T((GP_(k|k-1)G.T + R)^{-1})
-            inter_2 = np.einsum('ki, nkj -> nij',
-                                self.G,
-                                np.linalg.inv(inter_1))
+            inter_2 = self.G.T@np.linalg.inv(inter_1)
+            t5 = time.time()
+
 
             #K = P_(k|k-1)G.T((GP_(k|k-1)G.T + R)^{-1})
-            K = np.einsum('nik, nkj -> nij', P_k_km1, inter_2)
+            K = P_k_km1@inter_2
+            t6 = time.time()
 
+            A[:, k, :] = (a_k_km1 
+                          +
+                          np.einsum('nh, njh -> nj',
+                                    Y[:, k, :] - a_k_km1@self.G.T,
+                                    K))
+            t7 = time.time()
+            P[:, k, :, :] = (P_k_km1 - K@(self.G)@P_k_km1)
+            t8 = time.time()
 
-            A[:, k, :] = a_k_km1 + np.einsum('nh, njh -> nj',
-                                             (Y[:, k, :]
-                                              - 
-                                              a_k_km1@(self.G.T)),
-                                             K)
-            P[:, k, :, :] = (P_k_km1 
-                          - 
-                          np.einsum('nik, kl, nlj -> nij',
-                                    K,
-                                    self.G,
-                                    P_k_km1))
+            if self.verbose:
+                print('delta1 :', t2 - t1)
+                print('delta2 :', t3 - t2)
+                print('delta3 :', t4 - t3)
+                print('delta4 :', t5 - t4)
+                print('delta5 :', t6 - t5)
+                print('delta6 :', t7 - t6)
+                print('delta7 :', t8 - t7)
+
         return A, P
 
 
